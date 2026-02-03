@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>☀️ Solar Alerts Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f2f2f2;
+      padding: 20px;
+    }
+
+    h1, h2 {
+      text-align: center;
+    }
+
+    .box {
+      max-width: 900px;
+      margin: auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+
+    .latest {
+      margin-bottom: 20px;
+      padding: 15px;
+      border-radius: 6px;
+      font-weight: bold;
+      text-align: center;
+    }
+
+    .healthy { background: #2ecc71; color: #fff; }
+    .warning { background: #f1c40f; color: #000; }
+    .fault   { background: #e74c3c; color: #fff; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+
+    th, td {
+      padding: 10px;
+      border: 1px solid #eee;
+      text-align: center;
+      font-size: 14px;
+    }
+
+    th {
+      background: #f7f7f7;
+    }
+
+    .badge {
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: bold;
+      display: inline-block;
+    }
+
+    pre {
+      margin-top: 20px;
+      background: #f5f5f5;
+      padding: 12px;
+      border-radius: 6px;
+      overflow-x: auto;
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+
+<h1>☀️ Solar Alerts Dashboard</h1>
+
+<div class="box">
+
+  <div id="latest" class="latest healthy">
+    Waiting for data…
+  </div>
+
+  <h2>Recent Alerts</h2>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Time</th>
+        <th>Panel</th>
+        <th>Voltage (V)</th>
+        <th>Current (A)</th>
+        <th>Temp (°C)</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody id="alerts-body"></tbody>
+  </table>
+
+  <h3>Raw JSON (Latest)</h3>
+  <pre id="raw">No data yet</pre>
+
+</div>
+
+<script>
+  function statusClass(status) {
+    if (!status) return 'healthy';
+    if (status.includes('OVER') || status.includes('FAIL')) return 'fault';
+    if (status.includes('LOW')) return 'warning';
+    return 'healthy';
+  }
+
+  async function fetchAlerts() {
+    try {
+      const res = await fetch('/api/alerts');
+      const json = await res.json();
+      const alerts = json.alerts || [];
+
+      const tbody = document.getElementById('alerts-body');
+      tbody.innerHTML = '';
+
+      if (alerts.length === 0) {
+        document.getElementById('latest').textContent = 'No data yet';
+        document.getElementById('raw').textContent = 'No data yet';
+        return;
+      }
+
+      alerts.forEach(a => {
+        const tr = document.createElement('tr');
+        const cls = statusClass(a.status);
+
+        tr.innerHTML = `
+          <td>${a.timestamp || ''}</td>
+          <td>${a.panel_id || ''}</td>
+          <td>${a.voltage ?? ''}</td>
+          <td>${a.current ?? ''}</td>
+          <td>${a.temperature ?? ''}</td>
+          <td><span class="badge ${cls}">${a.status || ''}</span></td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      const latest = alerts[0];
+      const latestClass = statusClass(latest.status);
+      const latestDiv = document.getElementById('latest');
+
+      latestDiv.className = `latest ${latestClass}`;
+      latestDiv.textContent =
+        `Panel ${latest.panel_id} — ${latest.status} @ ${latest.timestamp}`;
+
+      document.getElementById('raw').textContent =
+        JSON.stringify(latest, null, 2);
+
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  fetchAlerts();
+  setInterval(fetchAlerts, 2000);
+</script>
+
+</body>
+</html>

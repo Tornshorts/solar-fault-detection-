@@ -1,15 +1,49 @@
-#Receives esp data and stores in sqlite
-from flask import request,jsonify, Blueprint
-from services.database import insert_alert
+from flask import request, jsonify, Blueprint, render_template
+from services import database
 
-alert_bp=Blueprint("alert",__name__)
+# Blueprint for API routes (prefix: /api)
+alert_bp = Blueprint("alert", __name__, url_prefix="/api")
 
-@alert_bp.route("/alert", methods=["POST"])
-def receive_alert():
+# Blueprint for page routes (no prefix)
+page_bp = Blueprint("page", __name__)
+
+
+@alert_bp.route("/data", methods=["POST"])
+def receive_data():
     data = request.get_json()
 
-    if not data:
-        return jsonify({"error":"Invalid JSON"}),400
-    
-    insert_alert(data)
-    return jsonify({"message":"Allert stored"}),200
+    print("📡 RAW DATA FROM ESP8266:")
+    print(data)
+
+    # Persist to database
+    try:
+        database.insert_alert(data)
+    except Exception as e:
+        print("Error inserting alert:", e)
+
+    return jsonify({
+        "message": "Data received",
+        "received": data
+    }), 200
+
+
+@alert_bp.route("/alerts", methods=["GET"])
+def get_alerts():
+    rows = database.get_recent_alerts(50)
+    # rows: list of tuples (panel_id, voltage, current, temperature, status, timestamp)
+    alerts = []
+    for r in rows:
+        alerts.append({
+            "panel_id": r[0],
+            "voltage": r[1],
+            "current": r[2],
+            "temperature": r[3],
+            "status": r[4],
+            "timestamp": r[5]
+        })
+    return jsonify({"alerts": alerts}), 200
+
+
+@page_bp.route("/")
+def dashboard():
+    return render_template("dashboard.html")
