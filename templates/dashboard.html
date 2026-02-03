@@ -2,106 +2,616 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>☀️ Solar Alerts Dashboard</title>
+  <title>☀️ Solar Fault Detection Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Real-time solar panel monitoring and fault detection system">
+  
+  <!-- Google Fonts - Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
   <style>
+    :root {
+      /* Primary Colors - Navy & Orange Theme */
+      --primary-navy: #1a2f5a;
+      --primary-navy-dark: #0f1c3a;
+      --primary-navy-light: #2a4478;
+      --primary-orange: #f97316;
+      --primary-orange-dark: #ea580c;
+      --primary-orange-light: #fb923c;
+      
+      /* Neutral Colors */
+      --bg-light: #f8fafc;
+      --bg-white: #ffffff;
+      --text-dark: #1e293b;
+      --text-muted: #64748b;
+      --text-light: #94a3b8;
+      --border-color: #e2e8f0;
+      
+      /* Status Colors */
+      --status-healthy: #10b981;
+      --status-healthy-bg: rgba(16, 185, 129, 0.1);
+      --status-warning: #f59e0b;
+      --status-warning-bg: rgba(245, 158, 11, 0.1);
+      --status-fault: #ef4444;
+      --status-fault-bg: rgba(239, 68, 68, 0.1);
+      
+      /* Shadows */
+      --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+      --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+      --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+      --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+      
+      /* Border Radius */
+      --radius-sm: 6px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --radius-xl: 24px;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
     body {
-      font-family: Arial, sans-serif;
-      background: #f2f2f2;
-      padding: 20px;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, var(--bg-light) 0%, #e2e8f0 100%);
+      min-height: 100vh;
+      color: var(--text-dark);
+      line-height: 1.6;
     }
 
-    h1, h2 {
-      text-align: center;
+    /* Header/Navbar */
+    .navbar {
+      background: var(--primary-navy);
+      padding: 1rem 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: var(--shadow-lg);
+      position: sticky;
+      top: 0;
+      z-index: 100;
     }
 
-    .box {
-      max-width: 900px;
-      margin: auto;
-      background: #fff;
-      padding: 20px;
-      border-radius: 8px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    .navbar-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
     }
 
-    .latest {
-      margin-bottom: 20px;
-      padding: 15px;
-      border-radius: 6px;
-      font-weight: bold;
-      text-align: center;
+    .navbar-logo {
+      width: 44px;
+      height: 44px;
+      background: linear-gradient(135deg, var(--primary-orange) 0%, var(--primary-orange-dark) 100%);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      box-shadow: 0 4px 15px rgba(249, 115, 22, 0.4);
     }
 
-    .healthy { background: #2ecc71; color: #fff; }
-    .warning { background: #f1c40f; color: #000; }
-    .fault   { background: #e74c3c; color: #fff; }
+    .navbar-title {
+      color: white;
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+
+    .navbar-title span {
+      color: var(--primary-orange);
+    }
+
+    .navbar-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 0.875rem;
+    }
+
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      background: var(--status-healthy);
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.7; transform: scale(1.1); }
+    }
+
+    /* Main Container */
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+
+    /* Stats Cards */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .stat-card {
+      background: var(--bg-white);
+      border-radius: var(--radius-lg);
+      padding: 1.5rem;
+      box-shadow: var(--shadow-md);
+      border: 1px solid var(--border-color);
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .stat-card:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-xl);
+    }
+
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 4px;
+      height: 100%;
+      background: linear-gradient(to bottom, var(--primary-orange), var(--primary-orange-dark));
+    }
+
+    .stat-card.navy::before {
+      background: linear-gradient(to bottom, var(--primary-navy), var(--primary-navy-dark));
+    }
+
+    .stat-label {
+      font-size: 0.875rem;
+      color: var(--text-muted);
+      font-weight: 500;
+      margin-bottom: 0.5rem;
+    }
+
+    .stat-value {
+      font-size: 2rem;
+      font-weight: 800;
+      color: var(--primary-navy);
+      line-height: 1.2;
+    }
+
+    .stat-value.orange {
+      color: var(--primary-orange);
+    }
+
+    .stat-suffix {
+      font-size: 0.875rem;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    /* Latest Alert Banner */
+    .alert-banner {
+      border-radius: var(--radius-lg);
+      padding: 1.5rem 2rem;
+      margin-bottom: 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      box-shadow: var(--shadow-lg);
+      transition: all 0.3s ease;
+    }
+
+    .alert-banner.healthy {
+      background: linear-gradient(135deg, var(--status-healthy) 0%, #059669 100%);
+      color: white;
+    }
+
+    .alert-banner.warning {
+      background: linear-gradient(135deg, var(--status-warning) 0%, #d97706 100%);
+      color: white;
+    }
+
+    .alert-banner.fault {
+      background: linear-gradient(135deg, var(--status-fault) 0%, #dc2626 100%);
+      color: white;
+    }
+
+    .alert-content {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .alert-icon {
+      width: 50px;
+      height: 50px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+    }
+
+    .alert-text h3 {
+      font-size: 1.125rem;
+      font-weight: 700;
+      margin-bottom: 0.25rem;
+    }
+
+    .alert-text p {
+      font-size: 0.875rem;
+      opacity: 0.9;
+    }
+
+    .alert-time {
+      background: rgba(255, 255, 255, 0.2);
+      padding: 0.5rem 1rem;
+      border-radius: var(--radius-md);
+      font-size: 0.875rem;
+      font-weight: 500;
+    }
+
+    /* Main Content Card */
+    .content-card {
+      background: var(--bg-white);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-lg);
+      overflow: hidden;
+      border: 1px solid var(--border-color);
+    }
+
+    .card-header {
+      background: var(--primary-navy);
+      padding: 1.25rem 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .card-header h2 {
+      color: white;
+      font-size: 1.25rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .card-header h2::before {
+      content: '';
+      width: 4px;
+      height: 24px;
+      background: var(--primary-orange);
+      border-radius: 2px;
+    }
+
+    .card-body {
+      padding: 1.5rem 2rem 2rem;
+    }
+
+    /* Table Styles */
+    .table-wrapper {
+      overflow-x: auto;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-color);
+    }
 
     table {
       width: 100%;
       border-collapse: collapse;
-      margin-top: 15px;
     }
 
-    th, td {
-      padding: 10px;
-      border: 1px solid #eee;
-      text-align: center;
-      font-size: 14px;
+    thead {
+      background: linear-gradient(135deg, var(--primary-navy) 0%, var(--primary-navy-light) 100%);
     }
 
     th {
-      background: #f7f7f7;
+      padding: 1rem 1.25rem;
+      text-align: left;
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: white;
     }
 
+    tbody tr {
+      transition: background 0.2s ease;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    tbody tr:last-child {
+      border-bottom: none;
+    }
+
+    tbody tr:hover {
+      background: rgba(249, 115, 22, 0.05);
+    }
+
+    td {
+      padding: 1rem 1.25rem;
+      font-size: 0.9375rem;
+      color: var(--text-dark);
+    }
+
+    td:first-child {
+      font-weight: 500;
+      color: var(--primary-navy);
+    }
+
+    /* Status Badges */
     .badge {
-      padding: 4px 8px;
-      border-radius: 4px;
-      font-size: 12px;
-      font-weight: bold;
-      display: inline-block;
+      padding: 0.375rem 0.875rem;
+      border-radius: 50px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    .badge::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+    }
+
+    .badge.healthy {
+      background: var(--status-healthy-bg);
+      color: var(--status-healthy);
+    }
+
+    .badge.healthy::before {
+      background: var(--status-healthy);
+    }
+
+    .badge.warning {
+      background: var(--status-warning-bg);
+      color: var(--status-warning);
+    }
+
+    .badge.warning::before {
+      background: var(--status-warning);
+    }
+
+    .badge.fault {
+      background: var(--status-fault-bg);
+      color: var(--status-fault);
+    }
+
+    .badge.fault::before {
+      background: var(--status-fault);
+    }
+
+    /* JSON Section */
+    .json-section {
+      margin-top: 2rem;
+    }
+
+    .json-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .json-header h3 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text-dark);
+    }
+
+    .json-header .tag {
+      background: var(--primary-navy);
+      color: white;
+      padding: 0.25rem 0.75rem;
+      border-radius: 50px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
     }
 
     pre {
-      margin-top: 20px;
-      background: #f5f5f5;
-      padding: 12px;
-      border-radius: 6px;
+      background: linear-gradient(135deg, var(--primary-navy-dark) 0%, var(--primary-navy) 100%);
+      color: #e2e8f0;
+      padding: 1.5rem;
+      border-radius: var(--radius-md);
       overflow-x: auto;
-      font-size: 13px;
+      font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+      font-size: 0.875rem;
+      line-height: 1.6;
+      box-shadow: var(--shadow-md);
+    }
+
+    /* Footer */
+    .footer {
+      text-align: center;
+      padding: 2rem;
+      color: var(--text-muted);
+      font-size: 0.875rem;
+    }
+
+    .footer a {
+      color: var(--primary-orange);
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    .footer a:hover {
+      text-decoration: underline;
+    }
+
+    /* Empty State */
+    .empty-state {
+      text-align: center;
+      padding: 3rem 2rem;
+      color: var(--text-muted);
+    }
+
+    .empty-state-icon {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+      opacity: 0.5;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .navbar {
+        padding: 1rem;
+        flex-direction: column;
+        gap: 0.75rem;
+      }
+
+      .container {
+        padding: 1rem;
+      }
+
+      .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+      }
+
+      .stat-card {
+        padding: 1rem;
+      }
+
+      .stat-value {
+        font-size: 1.5rem;
+      }
+
+      .alert-banner {
+        flex-direction: column;
+        text-align: center;
+        padding: 1.25rem;
+      }
+
+      .alert-content {
+        flex-direction: column;
+      }
+
+      .card-header, .card-body {
+        padding: 1rem;
+      }
+
+      th, td {
+        padding: 0.75rem;
+        font-size: 0.8rem;
+      }
     }
   </style>
 </head>
 <body>
 
-<h1>☀️ Solar Alerts Dashboard</h1>
+<!-- Navigation Bar -->
+<nav class="navbar">
+  <div class="navbar-brand">
+    <div class="navbar-logo">☀️</div>
+    <h1 class="navbar-title">Solar<span>Guard</span></h1>
+  </div>
+  <div class="navbar-status">
+    <span class="status-dot"></span>
+    <span>System Active</span>
+  </div>
+</nav>
 
-<div class="box">
+<div class="container">
 
-  <div id="latest" class="latest healthy">
-    Waiting for data…
+  <!-- Stats Grid -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-label">Total Alerts</div>
+      <div class="stat-value" id="total-alerts">0</div>
+      <div class="stat-suffix">Today</div>
+    </div>
+    <div class="stat-card navy">
+      <div class="stat-label">Healthy Panels</div>
+      <div class="stat-value orange" id="healthy-count">-</div>
+      <div class="stat-suffix">Active</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Warnings</div>
+      <div class="stat-value" id="warning-count">0</div>
+      <div class="stat-suffix">Attention Needed</div>
+    </div>
+    <div class="stat-card navy">
+      <div class="stat-label">Faults</div>
+      <div class="stat-value orange" id="fault-count">0</div>
+      <div class="stat-suffix">Critical</div>
+    </div>
   </div>
 
-  <h2>Recent Alerts</h2>
+  <!-- Latest Alert Banner -->
+  <div id="latest" class="alert-banner healthy">
+    <div class="alert-content">
+      <div class="alert-icon">⏳</div>
+      <div class="alert-text">
+        <h3>Waiting for Data</h3>
+        <p>Connecting to solar panel sensors...</p>
+      </div>
+    </div>
+    <div class="alert-time">--:--</div>
+  </div>
 
-  <table>
-    <thead>
-      <tr>
-        <th>Time</th>
-        <th>Panel</th>
-        <th>Voltage (V)</th>
-        <th>Current (A)</th>
-        <th>Temp (°C)</th>
-        <th>Status</th>
-      </tr>
-    </thead>
-    <tbody id="alerts-body"></tbody>
-  </table>
+  <!-- Recent Alerts Table -->
+  <div class="content-card">
+    <div class="card-header">
+      <h2>Recent Alerts</h2>
+    </div>
+    <div class="card-body">
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Panel ID</th>
+              <th>Voltage (V)</th>
+              <th>Current (A)</th>
+              <th>Temp (°C)</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="alerts-body">
+            <tr>
+              <td colspan="6">
+                <div class="empty-state">
+                  <div class="empty-state-icon">📡</div>
+                  <p>Waiting for sensor data...</p>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
 
-  <h3>Raw JSON (Latest)</h3>
-  <pre id="raw">No data yet</pre>
+      <!-- JSON Section -->
+      <div class="json-section">
+        <div class="json-header">
+          <h3>Latest Reading</h3>
+          <span class="tag">JSON</span>
+        </div>
+        <pre id="raw">{ "status": "waiting for data..." }</pre>
+      </div>
+    </div>
+  </div>
 
 </div>
+
+<!-- Footer -->
+<footer class="footer">
+  <p>SolarGuard Fault Detection System • Built with ❤️ for renewable energy</p>
+</footer>
 
 <script>
   function statusClass(status) {
@@ -109,6 +619,20 @@
     if (status.includes('OVER') || status.includes('FAIL')) return 'fault';
     if (status.includes('LOW')) return 'warning';
     return 'healthy';
+  }
+
+  function getStatusIcon(status) {
+    const cls = statusClass(status);
+    if (cls === 'fault') return '🚨';
+    if (cls === 'warning') return '⚠️';
+    return '✅';
+  }
+
+  function getStatusLabel(status) {
+    const cls = statusClass(status);
+    if (cls === 'fault') return 'Critical Fault Detected';
+    if (cls === 'warning') return 'Warning Alert';
+    return 'All Systems Normal';
   }
 
   async function fetchAlerts() {
@@ -121,15 +645,32 @@
       tbody.innerHTML = '';
 
       if (alerts.length === 0) {
-        document.getElementById('latest').textContent = 'No data yet';
-        document.getElementById('raw').textContent = 'No data yet';
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="6">
+              <div class="empty-state">
+                <div class="empty-state-icon">📡</div>
+                <p>Waiting for sensor data...</p>
+              </div>
+            </td>
+          </tr>
+        `;
+        document.getElementById('raw').textContent = JSON.stringify({ status: "waiting for data..." }, null, 2);
         return;
       }
 
-      alerts.forEach(a => {
-        const tr = document.createElement('tr');
-        const cls = statusClass(a.status);
+      // Count statistics
+      let healthyCount = 0;
+      let warningCount = 0;
+      let faultCount = 0;
 
+      alerts.forEach(a => {
+        const cls = statusClass(a.status);
+        if (cls === 'healthy') healthyCount++;
+        else if (cls === 'warning') warningCount++;
+        else if (cls === 'fault') faultCount++;
+
+        const tr = document.createElement('tr');
         tr.innerHTML = `
           <td>${a.timestamp || ''}</td>
           <td>${a.panel_id || ''}</td>
@@ -141,14 +682,30 @@
         tbody.appendChild(tr);
       });
 
+      // Update stats cards
+      document.getElementById('total-alerts').textContent = alerts.length;
+      document.getElementById('healthy-count').textContent = healthyCount;
+      document.getElementById('warning-count').textContent = warningCount;
+      document.getElementById('fault-count').textContent = faultCount;
+
+      // Update latest alert banner
       const latest = alerts[0];
       const latestClass = statusClass(latest.status);
       const latestDiv = document.getElementById('latest');
 
-      latestDiv.className = `latest ${latestClass}`;
-      latestDiv.textContent =
-        `Panel ${latest.panel_id} — ${latest.status} @ ${latest.timestamp}`;
+      latestDiv.className = `alert-banner ${latestClass}`;
+      latestDiv.innerHTML = `
+        <div class="alert-content">
+          <div class="alert-icon">${getStatusIcon(latest.status)}</div>
+          <div class="alert-text">
+            <h3>${getStatusLabel(latest.status)}</h3>
+            <p>Panel ${latest.panel_id} — ${latest.status}</p>
+          </div>
+        </div>
+        <div class="alert-time">${latest.timestamp || '--:--'}</div>
+      `;
 
+      // Update JSON display
       document.getElementById('raw').textContent =
         JSON.stringify(latest, null, 2);
 
