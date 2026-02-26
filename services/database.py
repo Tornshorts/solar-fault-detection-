@@ -17,6 +17,7 @@ def init_db():
             panel_id TEXT,
             voltage REAL,
             current REAL,
+            load_pct REAL,
             temperature REAL,
             status TEXT,
             timestamp TEXT
@@ -32,12 +33,13 @@ def insert_alert(data):
 
     cursor.execute("""
         INSERT INTO alerts (
-            panel_id, voltage, current, temperature, status, timestamp
-        ) VALUES (?, ?, ?, ?, ?, ?)
+            panel_id, voltage, current, load_pct, temperature, status, timestamp
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
     """, (
         data.get("panel_id"),
         data.get("voltage"),
         data.get("current"),
+        data.get("load"),
         data.get("temperature"),
         data.get("status"),
         datetime.now().isoformat()
@@ -52,7 +54,7 @@ def get_recent_alerts(limit=20):
     cursor = connection.cursor()
 
     cursor.execute("""
-        SELECT panel_id, voltage, current, temperature, status, timestamp
+        SELECT panel_id, voltage, current, load_pct, temperature, status, timestamp
         FROM alerts
         ORDER BY timestamp DESC
         LIMIT ?
