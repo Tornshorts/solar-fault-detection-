@@ -1,4 +1,5 @@
 import re
+import json
 from flask import request, jsonify, Blueprint, render_template
 from services import database
 
@@ -45,10 +46,16 @@ def parse_serial_line(line):
 
 def determine_status(data):
     """Determine panel status based on sensor readings."""
-    voltage = data.get("voltage", 0)
-    current = data.get("current", 0)
-    temperature = data.get("temperature", 0)
-    load = data.get("load", 0)
+    voltage = data.get("voltage")
+    current = data.get("current")
+    temperature = data.get("temperature")
+    load = data.get("load")
+
+    # ESP sends null when sensor fails — treat as 0
+    if voltage is None: voltage = 0
+    if current is None: current = 0
+    if temperature is None: temperature = 0
+    if load is None: load = 0
 
     faults = []
 
@@ -98,50 +105,49 @@ def normalize_json(raw):
 
 @alert_bp.route("/data", methods=["POST"])
 def receive_data():
-    """
-    Accepts data in two formats:
-    1. Plain text from ESP serial: V: 2.42V | I: 510mA | L: 16% | T: 26.9C
-    2. JSON from ESP HTTP:
-       {"panel_voltage_v": 12.34, "current_ma": 210, "light_pct": 76,
-        "temp_c": 29.1, "device": "esp8266", "ip": "192.168.1.55"}
-    """
-    content_type = request.content_type or ""
+    content_type = (request.content_type or "").lower()
+
+    # DEBUG: see what Flask actually received
+    raw_body = request.get_data(as_text=True)  # don't strip yet
+    print("---- INCOMING ----")
+    print("Content-Type:", content_type)
+    print("Raw body:", repr(raw_body))
+    print("------------------")
 
     if "application/json" in content_type:
-        raw = request.get_json()
+        # ESP sends nan for failed sensors — not valid JSON
+        # Replace nan/NaN/Infinity with null before parsing
+        cleaned = re.sub(r'\bnan\b|\bNaN\b|\bInfinity\b|\b-Infinity\b', 'null', raw_body)
+        try:
+            raw = json.loads(cleaned)
+        except (json.JSONDecodeError, ValueError):
+            return jsonify({
+                "error": "Invalid JSON",
+                "hint": "Send valid JSON with Content-Type: application/json"
+            }), 400
         data = normalize_json(raw)
-    else:
-        # Plain text mode — parse the serial line
-        raw_text = request.get_data(as_text=True).strip()
-        print(f"📡 RAW SERIAL DATA: {raw_text}")
 
-        lines = [l.strip() for l in raw_text.splitlines() if l.strip()]
-        if not lines:
+    else:
+        raw_text = raw_body.strip()
+        if not raw_text:
             return jsonify({"error": "Empty data received"}), 400
 
+        lines = [l.strip() for l in raw_text.splitlines() if l.strip()]
         data = parse_serial_line(lines[-1])
 
-    # Add a default panel_id if not present
-    if "panel_id" not in data:
-        data["panel_id"] = data.get("device", "PANEL-1")
-
-    # Auto-determine status
-    if "status" not in data:
-        data["status"] = determine_status(data)
+    # Defaults
+    data.setdefault("panel_id", data.get("device", "PANEL-1"))
+    data.setdefault("status", determine_status(data))
 
     print("📡 PARSED DATA:", data)
 
-    # Persist to database
     try:
         database.insert_alert(data)
     except Exception as e:
         print("Error inserting alert:", e)
         return jsonify({"error": str(e)}), 500
 
-    return jsonify({
-        "message": "Data received",
-        "received": data
-    }), 200
+    return jsonify({"message": "Data received", "received": data}), 200
 
 
 @alert_bp.route("/alerts", methods=["GET"])
