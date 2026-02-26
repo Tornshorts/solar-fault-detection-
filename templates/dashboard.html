@@ -577,14 +577,15 @@
               <th>Time</th>
               <th>Panel ID</th>
               <th>Voltage (V)</th>
-              <th>Current (A)</th>
+              <th>Current (mA)</th>
+              <th>Load (%)</th>
               <th>Temp (°C)</th>
               <th>Status</th>
             </tr>
           </thead>
           <tbody id="alerts-body">
             <tr>
-              <td colspan="6">
+              <td colspan="7">
                 <div class="empty-state">
                   <div class="empty-state-icon">📡</div>
                   <p>Waiting for sensor data...</p>
@@ -676,6 +677,7 @@
           <td>${a.panel_id || ''}</td>
           <td>${a.voltage ?? ''}</td>
           <td>${a.current ?? ''}</td>
+          <td>${a.load ?? ''}</td>
           <td>${a.temperature ?? ''}</td>
           <td><span class="badge ${cls}">${a.status || ''}</span></td>
         `;
