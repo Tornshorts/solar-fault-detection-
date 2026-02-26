@@ -45,10 +45,16 @@ def parse_serial_line(line):
 
 def determine_status(data):
     """Determine panel status based on sensor readings."""
-    voltage = data.get("voltage", 0)
-    current = data.get("current", 0)
-    temperature = data.get("temperature", 0)
-    load = data.get("load", 0)
+    voltage = data.get("voltage")
+    current = data.get("current")
+    temperature = data.get("temperature")
+    load = data.get("load")
+
+    # ESP sends null when sensor fails — treat as 0
+    if voltage is None: voltage = 0
+    if current is None: current = 0
+    if temperature is None: temperature = 0
+    if load is None: load = 0
 
     faults = []
 
